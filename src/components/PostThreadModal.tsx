@@ -100,34 +100,64 @@ export const PostThreadModal: React.FC<PostThreadModalProps> = ({
   };
 
   const handleExportNotes = async () => {
-    const res = await fetch('/api/export-notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: post.title,
-        subject: getSubjectLabel(post.subject),
-        authorName: post.authorName,
-        authorRole: post.authorRole,
-        content: post.body,
-        replies: replies.map((r) => ({
-          authorName: r.authorName,
-          authorRole: r.authorRole,
-          body: r.body,
-          isVerifiedAnswer: r.isVerifiedAnswer,
-        })),
-      }),
-    });
-    if (res.ok) {
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'minbar-study-notes.md';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+    let blob: Blob | null = null;
+    try {
+      const res = await fetch('/api/export-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: post.title,
+          subject: getSubjectLabel(post.subject),
+          authorName: post.authorName,
+          authorRole: post.authorRole,
+          content: post.body,
+          replies: replies.map((r) => ({
+            authorName: r.authorName,
+            authorRole: r.authorRole,
+            body: r.body,
+            isVerifiedAnswer: r.isVerifiedAnswer,
+          })),
+        }),
+      });
+      if (res.ok) {
+        blob = await res.blob();
+      }
+    } catch {
+      // Static hosting fallback (e.g. GitHub Pages)
     }
+
+    if (!blob) {
+      const lines: string[] = [
+        `# ${post.title}`,
+        '',
+        `- **المادة:** ${getSubjectLabel(post.subject)}`,
+        `- **الكاتب:** ${post.authorName} (${post.authorRole === 'teacher' ? 'معلم' : 'طالب'})`,
+        `- **تاريخ التصدير:** ${new Date().toISOString().slice(0, 10)}`,
+        '',
+        '---',
+        '',
+        post.body,
+        '',
+      ];
+      if (replies.length > 0) {
+        lines.push('---', '', '## الإجابات والنقاشات', '');
+        replies.forEach((r, idx) => {
+          const badge = r.isVerifiedAnswer ? ' [إجابة علمية موثّقة]' : '';
+          const role = r.authorRole === 'teacher' ? 'معلم' : 'طالب';
+          lines.push(`### ${idx + 1}. ${r.authorName} (${role})${badge}`, '', r.body, '');
+        });
+      }
+      blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'minbar-study-notes.md';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   return (

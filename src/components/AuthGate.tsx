@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Award, BookOpen, CheckCircle2, GraduationCap, Users } from 'lucide-react';
+import heroCampusImg from '../assets/images/minbar_hero_campus_1795449252201.jpg';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface AuthGateProps {
@@ -24,7 +25,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onSignIn, authError }) => {
       {/* Top Bar Contract */}
       <header className="max-w-7xl w-full mx-auto px-6 py-4 flex items-center justify-between gap-8 border-b border-slate-200/70 dark:border-slate-800/70">
         <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
-          <img src="/icon.svg" alt="شعار مِنبَر" className="w-8 h-8 rounded-xl shrink-0" />
+          <img src="./icon.svg" alt="شعار مِنبَر" className="w-8 h-8 rounded-xl shrink-0" />
           <span className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
             مِنبَر
           </span>
@@ -74,7 +75,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onSignIn, authError }) => {
         <div className="lg:col-span-6 flex flex-col gap-5">
           <div className="relative flex-1 min-h-[260px] rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-200 dark:bg-slate-800">
             <img
-              src="/src/assets/images/minbar_hero_campus_1795449252201.jpg"
+              src={heroCampusImg}
               alt="طلاب ومعلمون يتعاونون في مكتبة جامعية حديثة"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover lg:h-full"

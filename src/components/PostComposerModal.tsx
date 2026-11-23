@@ -49,6 +49,7 @@ export const PostComposerModal: React.FC<PostComposerModalProps> = ({
   const handleInsertCitation = async () => {
     if (!citAuthor.trim() || !citTitle.trim()) return;
     setCitLoading(true);
+    let formatted = '';
     try {
       const res = await fetch('/api/format-citation', {
         method: 'POST',
@@ -62,19 +63,34 @@ export const PostComposerModal: React.FC<PostComposerModalProps> = ({
       });
       if (res.ok) {
         const data = (await res.json()) as { formatted: string };
-        setBody((prev) =>
-          (prev ? `${prev}\n\nالمرجع (${citStyle}): ${data.formatted}` : `المرجع (${citStyle}): ${data.formatted}`).slice(
-            0,
-            BLUEPRINT_LIMITS.BODY_MAX
-          )
-        );
-        setCitAuthor('');
-        setCitTitle('');
-        setShowCitationTool(false);
+        formatted = data.formatted;
       }
-    } finally {
-      setCitLoading(false);
+    } catch {
+      // Static hosting fallback (e.g. GitHub Pages)
     }
+
+    if (!formatted) {
+      const a = citAuthor.trim();
+      const t = citTitle.trim();
+      const y = citYear.trim() || String(new Date().getFullYear());
+      formatted =
+        citStyle === 'APA'
+          ? `${a} (${y}). ${t}.`
+          : citStyle === 'MLA'
+          ? `${a}. "${t}." ${y}.`
+          : `${a}. ${t}. ${y}.`;
+    }
+
+    setBody((prev) =>
+      (prev ? `${prev}\n\nالمرجع (${citStyle}): ${formatted}` : `المرجع (${citStyle}): ${formatted}`).slice(
+        0,
+        BLUEPRINT_LIMITS.BODY_MAX
+      )
+    );
+    setCitAuthor('');
+    setCitTitle('');
+    setShowCitationTool(false);
+    setCitLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

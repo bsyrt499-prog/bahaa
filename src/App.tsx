@@ -43,6 +43,7 @@ import {
   Users,
   Video,
 } from 'lucide-react';
+import scienceNotebookImg from './assets/images/minbar_science_notebook_1795449252722.jpg';
 import { AuthGate } from './components/AuthGate';
 import { PostComposerModal } from './components/PostComposerModal';
 import { PostThreadModal } from './components/PostThreadModal';
@@ -730,7 +731,7 @@ export default function App() {
             onClick={() => setActiveTab('feed')}
             className="flex items-center gap-2.5 whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <img src="/icon.svg" alt="مِنبَر" className="w-7 h-7 rounded-lg shrink-0" />
+            <img src="./icon.svg" alt="مِنبَر" className="w-7 h-7 rounded-lg shrink-0" />
             <span className="font-display text-lg font-bold text-slate-900 dark:text-slate-100">
               مِنبَر
             </span>
@@ -1111,7 +1112,7 @@ export default function App() {
                 </div>
                 <div className="sm:col-span-5 min-h-[150px] bg-slate-100 dark:bg-slate-800">
                   <img
-                    src="/src/assets/images/minbar_science_notebook_1795449252722.jpg"
+                    src={scienceNotebookImg}
                     alt="دفتر ملاحظات علمي وأدوات هندسية"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
@@ -1382,7 +1383,7 @@ export default function App() {
               <div className="rounded-2xl bg-white dark:bg-[#121824] border border-slate-200/80 dark:border-slate-800 p-5 space-y-4">
                 <div className="flex items-start gap-3">
                   <img
-                    src="/pwa-192x192.png"
+                    src="./pwa-192x192.png"
                     alt="شعار مِنبَر"
                     className="w-12 h-12 rounded-2xl shrink-0"
                   />
