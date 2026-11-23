@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import type { Request, Response } from 'express';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -100,10 +101,36 @@ app.post('/api/export-notes', (req: Request, res: Response) => {
 });
 
 async function startServer() {
+  const httpServer = http.createServer(app);
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
+    const disableHmr = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      plugins: disableHmr
+        ? [
+            {
+              name: 'disable-vite-client-ws-when-hmr-off',
+              enforce: 'post',
+              transform(code, id) {
+                if (id.includes('vite/dist/client/client.mjs')) {
+                  return code.replace(
+                    'transport.connect(createHMRHandler(handleMessage));',
+                    '/* HMR disabled: WebSocket connection skipped */'
+                  );
+                }
+                return null;
+              },
+            },
+          ]
+        : [],
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+        hmr: disableHmr ? false : true,
+        ws: disableHmr ? false : { server: httpServer },
+        watch: disableHmr ? null : {},
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -119,7 +146,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Minbar server listening on http://0.0.0.0:${PORT}`);
   });
 }
