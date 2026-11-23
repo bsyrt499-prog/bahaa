@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "UserPrivate": {
+      "title": "Private User Settings",
+      "description": "Private user account details and saved bookmarks isolated strictly to the owner.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["student", "teacher"] },
+        "specialty": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "institution": { "type": "string", "minLength": 0, "maxLength": 100 },
+        "savedPostIds": { "type": "array", "description": "Bounded list of up to 100 bookmarked post IDs." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "role", "specialty", "institution", "savedPostIds", "createdAt", "updatedAt"]
+    },
+    "MemberPublic": {
+      "title": "Public Academic Profile",
+      "description": "PII-free public community profile for students and teachers shown on posts and leaderboard.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "role": { "type": "string", "enum": ["student", "teacher"] },
+        "specialty": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "institution": { "type": "string", "minLength": 0, "maxLength": 100 },
+        "points": { "type": "number" },
+        "answersCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "role", "specialty", "institution", "points", "answersCount", "createdAt", "updatedAt"]
+    },
+    "CommunityPost": {
+      "title": "Community Post",
+      "description": "Academic question, study resource summary, or discussion thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "authorRole": { "type": "string", "enum": ["student", "teacher"] },
+        "authorSpecialty": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "subject": { "type": "string", "enum": ["math", "physics", "cs", "chemistry", "arabic", "english", "study"] },
+        "postType": { "type": "string", "enum": ["question", "resource", "discussion"] },
+        "title": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "body": { "type": "string", "minLength": 5, "maxLength": 4000 },
+        "attachmentUrl": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "status": { "type": "string", "enum": ["open", "resolved"] },
+        "votesCount": { "type": "number" },
+        "repliesCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "authorId", "authorName", "authorRole", "authorSpecialty", "subject", "postType", "title", "body", "attachmentUrl", "status", "votesCount", "repliesCount", "createdAt", "updatedAt"]
+    },
+    "PostVote": {
+      "title": "Post Upvote Record",
+      "description": "Atomic upvote marker keyed by voter UID under a post.",
+      "type": "object",
+      "properties": {
+        "voterId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "postId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["voterId", "postId", "createdAt"]
+    },
+    "PostReply": {
+      "title": "Post Reply",
+      "description": "Threaded reply or teacher-verified answer on a community post.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "postId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "authorRole": { "type": "string", "enum": ["student", "teacher"] },
+        "body": { "type": "string", "minLength": 2, "maxLength": 2500 },
+        "isVerifiedAnswer": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "postId", "authorId", "authorName", "authorRole", "body", "isVerifiedAnswer", "createdAt", "updatedAt"]
+    },
+    "AcademicQuiz": {
+      "title": "Interactive Quiz",
+      "description": "Teacher-published micro-quiz with explanations and instant scoring.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "subject": { "type": "string", "enum": ["math", "physics", "cs", "chemistry", "arabic", "english", "study"] },
+        "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "description": { "type": "string", "minLength": 0, "maxLength": 400 },
+        "questions": { "type": "array", "description": "Bounded list of 1 to 10 quiz questions." },
+        "attemptsCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "authorId", "authorName", "subject", "title", "description", "questions", "attemptsCount", "createdAt", "updatedAt"]
+    },
+    "StudySession": {
+      "title": "Study Session / Office Hours",
+      "description": "Scheduled live study circle or teacher office hours session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "hostRole": { "type": "string", "enum": ["student", "teacher"] },
+        "subject": { "type": "string", "enum": ["math", "physics", "cs", "chemistry", "arabic", "english", "study"] },
+        "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "description": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "scheduledAt": { "type": "string", "minLength": 10, "maxLength": 40 },
+        "durationMinutes": { "type": "number" },
+        "meetingLink": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "status": { "type": "string", "enum": ["upcoming", "live", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "hostId", "hostName", "hostRole", "subject", "title", "description", "scheduledAt", "durationMinutes", "meetingLink", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Private owner-only user profile containing email and bookmarks."
+    },
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/MemberPublic" },
+      "description": "PII-free public academic profile for students and teachers."
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/CommunityPost" },
+      "description": "Academic Q&A, study notes, and community discussions."
+    },
+    "/posts/{postId}/votes/{voterId}": {
+      "schema": { "$ref": "#/entities/PostVote" },
+      "description": "Atomic upvote records per user."
+    },
+    "/posts/{postId}/replies/{replyId}": {
+      "schema": { "$ref": "#/entities/PostReply" },
+      "description": "Replies and teacher-verified answers under a post."
+    },
+    "/quizzes/{quizId}": {
+      "schema": { "$ref": "#/entities/AcademicQuiz" },
+      "description": "Interactive micro-quizzes authored by teachers."
+    },
+    "/sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/StudySession" },
+      "description": "Live study circles and teacher office hours."
+    }
+  }
+}

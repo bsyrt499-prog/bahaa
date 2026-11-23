@@ -1,0 +1,339 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny all unmatched paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidRole(role) {
+      return role in ['student', 'teacher'];
+    }
+
+    function isValidSubject(subj) {
+      return subj in ['math', 'physics', 'cs', 'chemistry', 'arabic', 'english', 'study'];
+    }
+
+    function isTeacher() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserPrivate(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'role', 'specialty', 'institution', 'savedPostIds', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'role', 'specialty', 'institution', 'savedPostIds', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && isValidRole(data.role)
+        && data.specialty is string && data.specialty.size() >= 1 && data.specialty.size() <= 80
+        && data.institution is string && data.institution.size() <= 100
+        && data.savedPostIds is list && data.savedPostIds.size() <= 100
+        && (data.savedPostIds.size() == 0 || data.savedPostIds[0] is string)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMemberPublic(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'role', 'specialty', 'institution', 'points', 'answersCount', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'role', 'specialty', 'institution', 'points', 'answersCount', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && isValidRole(data.role)
+        && data.specialty is string && data.specialty.size() >= 1 && data.specialty.size() <= 80
+        && data.institution is string && data.institution.size() <= 100
+        && data.points is int && data.points >= 0 && data.points <= 1000000
+        && data.answersCount is int && data.answersCount >= 0 && data.answersCount <= 100000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'authorRole', 'authorSpecialty', 'subject', 'postType', 'title', 'body', 'attachmentUrl', 'status', 'votesCount', 'repliesCount', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'authorId', 'authorName', 'authorRole', 'authorSpecialty', 'subject', 'postType', 'title', 'body', 'attachmentUrl', 'status', 'votesCount', 'repliesCount', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.authorId)
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+        && isValidRole(data.authorRole)
+        && data.authorSpecialty is string && data.authorSpecialty.size() >= 1 && data.authorSpecialty.size() <= 80
+        && isValidSubject(data.subject)
+        && data.postType in ['question', 'resource', 'discussion']
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 160
+        && data.body is string && data.body.size() >= 5 && data.body.size() <= 4000
+        && data.attachmentUrl is string && data.attachmentUrl.size() <= 300
+        && data.status in ['open', 'resolved']
+        && data.votesCount is int && data.votesCount >= 0 && data.votesCount <= 1000000
+        && data.repliesCount is int && data.repliesCount >= 0 && data.repliesCount <= 100000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVote(data) {
+      return data.keys().hasAll(['voterId', 'postId', 'createdAt'])
+        && data.keys().hasOnly(['voterId', 'postId', 'createdAt'])
+        && isValidId(data.voterId)
+        && isValidId(data.postId)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidReply(data) {
+      return data.keys().hasAll(['id', 'postId', 'authorId', 'authorName', 'authorRole', 'body', 'isVerifiedAnswer', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'postId', 'authorId', 'authorName', 'authorRole', 'body', 'isVerifiedAnswer', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.postId)
+        && isValidId(data.authorId)
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+        && isValidRole(data.authorRole)
+        && data.body is string && data.body.size() >= 2 && data.body.size() <= 2500
+        && data.isVerifiedAnswer is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQuiz(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'subject', 'title', 'description', 'questions', 'attemptsCount', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'authorId', 'authorName', 'subject', 'title', 'description', 'questions', 'attemptsCount', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.authorId)
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+        && isValidSubject(data.subject)
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 140
+        && data.description is string && data.description.size() <= 400
+        && data.questions is list && data.questions.size() >= 1 && data.questions.size() <= 10
+        && data.questions[0] is map
+        && data.attemptsCount is int && data.attemptsCount >= 0 && data.attemptsCount <= 1000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['id', 'hostId', 'hostName', 'hostRole', 'subject', 'title', 'description', 'scheduledAt', 'durationMinutes', 'meetingLink', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'hostId', 'hostName', 'hostRole', 'subject', 'title', 'description', 'scheduledAt', 'durationMinutes', 'meetingLink', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.hostId)
+        && data.hostName is string && data.hostName.size() >= 1 && data.hostName.size() <= 80
+        && isValidRole(data.hostRole)
+        && isValidSubject(data.subject)
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 140
+        && data.description is string && data.description.size() <= 500
+        && data.scheduledAt is string && data.scheduledAt.size() >= 10 && data.scheduledAt.size() <= 40
+        && data.durationMinutes is int && data.durationMinutes >= 10 && data.durationMinutes <= 300
+        && data.meetingLink is string && data.meetingLink.size() <= 300
+        && data.status in ['upcoming', 'live', 'completed']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // 1. Private User Account & Bookmarks (Strict PII Isolation)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidUserPrivate(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidUserPrivate(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'specialty', 'institution', 'savedPostIds', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // 2. Public Academic Member Profiles (No PII)
+    match /members/{memberId} {
+      allow get: if isSignedIn() && isValidId(memberId);
+      allow list: if isSignedIn() && resource.data.role in ['student', 'teacher'];
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(memberId)
+        && request.auth.uid == memberId
+        && isValidMemberPublic(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().points == 10
+        && incoming().answersCount == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(memberId)
+        && request.auth.uid == memberId
+        && isValidMemberPublic(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'specialty', 'institution', 'updatedAt']) ||
+          (incoming().diff(existing()).affectedKeys().hasOnly(['points', 'answersCount', 'updatedAt'])
+            && incoming().points >= existing().points
+            && incoming().points <= existing().points + 25
+            && incoming().answersCount >= existing().answersCount
+            && incoming().answersCount <= existing().answersCount + 1)
+        );
+      allow delete: if false;
+    }
+
+    // 3. Community Posts (Q&A, Study Resources, Discussions)
+    match /posts/{postId} {
+      allow get: if isSignedIn() && isValidId(postId);
+      allow list: if isSignedIn() && resource.data.status in ['open', 'resolved'];
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(postId)
+        && isValidPost(incoming())
+        && incoming().id == postId
+        && incoming().authorId == request.auth.uid
+        && incoming().status == 'open'
+        && incoming().votesCount == 0
+        && incoming().repliesCount == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(postId)
+        && isValidPost(incoming())
+        && incoming().id == existing().id
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Author edits post content
+          (existing().authorId == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['subject', 'postType', 'title', 'body', 'attachmentUrl', 'status', 'updatedAt'])) ||
+          // Action 2: Atomic Upvote / Unvote linked to votes/{uid}
+          (incoming().diff(existing()).affectedKeys().hasOnly(['votesCount', 'updatedAt'])
+            && (
+              (incoming().votesCount == existing().votesCount + 1 && existsAfter(/databases/$(database)/documents/posts/$(postId)/votes/$(request.auth.uid))) ||
+              (incoming().votesCount == existing().votesCount - 1 && !existsAfter(/databases/$(database)/documents/posts/$(postId)/votes/$(request.auth.uid)))
+            )) ||
+          // Action 3: Increment repliesCount on reply creation
+          (incoming().diff(existing()).affectedKeys().hasOnly(['repliesCount', 'updatedAt'])
+            && incoming().repliesCount == existing().repliesCount + 1) ||
+          // Action 4: Author or Teacher marks thread resolved
+          ((existing().authorId == request.auth.uid || isTeacher())
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+        );
+      allow delete: if isSignedIn() && isEmailVerified() && isValidId(postId) && existing().authorId == request.auth.uid;
+
+      // 3a. Post Upvote Subcollection
+      match /votes/{voterId} {
+        allow get: if isSignedIn() && isValidId(postId) && isValidId(voterId);
+        allow list: if isSignedIn() && resource.data.voterId == request.auth.uid;
+        allow create: if isSignedIn() && isEmailVerified() && isValidId(postId) && isValidId(voterId)
+          && voterId == request.auth.uid
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && isValidVote(incoming())
+          && incoming().voterId == request.auth.uid
+          && incoming().postId == postId
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isSignedIn() && isEmailVerified() && isValidId(postId) && isValidId(voterId)
+          && voterId == request.auth.uid
+          && existing().voterId == request.auth.uid;
+      }
+
+      // 3b. Post Replies Subcollection (Master Gate via parent post)
+      match /replies/{replyId} {
+        allow get: if isSignedIn() && isValidId(postId) && isValidId(replyId)
+          && exists(/databases/$(database)/documents/posts/$(postId));
+        allow list: if isSignedIn() && resource.data.postId == postId;
+        allow create: if isSignedIn() && isEmailVerified() && isValidId(postId) && isValidId(replyId)
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && isValidReply(incoming())
+          && incoming().id == replyId
+          && incoming().postId == postId
+          && incoming().authorId == request.auth.uid
+          && incoming().isVerifiedAnswer == false
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isSignedIn() && isEmailVerified() && isValidId(postId) && isValidId(replyId)
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && isValidReply(incoming())
+          && incoming().id == existing().id
+          && incoming().postId == existing().postId
+          && incoming().authorId == existing().authorId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['body', 'updatedAt'])) ||
+            ((get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid || isTeacher())
+              && incoming().diff(existing()).affectedKeys().hasOnly(['isVerifiedAnswer', 'updatedAt']))
+          );
+        allow delete: if isSignedIn() && isEmailVerified() && isValidId(postId) && isValidId(replyId)
+          && existing().authorId == request.auth.uid;
+      }
+    }
+
+    // 4. Interactive Quizzes (Teacher-authored)
+    match /quizzes/{quizId} {
+      allow get: if isSignedIn() && isValidId(quizId);
+      allow list: if isSignedIn() && isValidSubject(resource.data.subject);
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(quizId)
+        && isValidQuiz(incoming())
+        && incoming().id == quizId
+        && incoming().authorId == request.auth.uid
+        && incoming().attemptsCount == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isTeacher();
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(quizId)
+        && isValidQuiz(incoming())
+        && incoming().id == existing().id
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['subject', 'title', 'description', 'questions', 'updatedAt'])) ||
+          (incoming().diff(existing()).affectedKeys().hasOnly(['attemptsCount', 'updatedAt']) && incoming().attemptsCount == existing().attemptsCount + 1)
+        );
+      allow delete: if isSignedIn() && isEmailVerified() && isValidId(quizId) && existing().authorId == request.auth.uid;
+    }
+
+    // 5. Study Sessions & Teacher Office Hours
+    match /sessions/{sessionId} {
+      allow get: if isSignedIn() && isValidId(sessionId);
+      allow list: if isSignedIn() && resource.data.status in ['upcoming', 'live', 'completed'];
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(sessionId)
+        && isValidSession(incoming())
+        && incoming().id == sessionId
+        && incoming().hostId == request.auth.uid
+        && incoming().status in ['upcoming', 'live']
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(sessionId)
+        && isValidSession(incoming())
+        && existing().status != 'completed'
+        && existing().hostId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().hostId == existing().hostId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'subject', 'scheduledAt', 'durationMinutes', 'meetingLink', 'description', 'status', 'updatedAt']);
+      allow delete: if isSignedIn() && isEmailVerified() && isValidId(sessionId) && existing().hostId == request.auth.uid;
+    }
+  }
+}
